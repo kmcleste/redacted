@@ -8,11 +8,14 @@ name = "engine-grpc"
 path = "src/main.rs"
 
 [dependencies]
-engine-core = { path = "../engine-core" }
-tonic       = { workspace = true }
-prost       = { workspace = true }
-tokio       = { workspace = true }
-uuid        = { workspace = true }
+engine-core                 = { path = "../engine-core" }
+tonic                       = { workspace = true }
+prost                       = { workspace = true }
+tokio                       = { workspace = true }
+uuid                        = { workspace = true }
+metrics-exporter-prometheus = { workspace = true }
+tracing                     = { workspace = true }
+tracing-subscriber          = { workspace = true }
 
 [build-dependencies]
 tonic-build = "0.12"

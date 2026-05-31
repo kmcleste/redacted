@@ -21,7 +21,7 @@ use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int};
 use std::ptr;
 
-use engine_core::{Engine, PolicyBundle};
+use engine_core::Engine;
 
 // ---------------------------------------------------------------------------
 // Handle

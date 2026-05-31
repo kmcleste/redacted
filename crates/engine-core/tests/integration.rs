@@ -3,8 +3,7 @@ Integration tests for engine-core — mirrors the Python test suite
 to ensure behavioural equivalence.
 */
 
-use engine_core::{Engine, EntityType, PolicyBundle, StreamingRehydrator};
-use std::collections::HashMap;
+use engine_core::Engine;
 
 fn engine() -> Engine {
     Engine::with_default_policy()
@@ -307,24 +306,29 @@ mod rehydrator {
     #[test]
     fn simple_rehydration() {
         let map = HashMap::from([("[PHONE_1]".to_string(), "(415) 555-1234".to_string())]);
-        let (result, count) = BatchRehydrator.rehydrate("Call [PHONE_1] for support.", &map);
+        let (result, hits, misses) = BatchRehydrator.rehydrate("Call [PHONE_1] for support.", &map);
         assert_eq!(result, "Call (415) 555-1234 for support.");
-        assert_eq!(count, 1);
+        assert_eq!(hits, 1);
+        assert_eq!(misses, 0);
     }
 
     #[test]
     fn unknown_placeholder_passed_through() {
-        let (result, count) = BatchRehydrator.rehydrate("Value is [UNKNOWN_99].", &HashMap::new());
+        let (result, hits, misses) =
+            BatchRehydrator.rehydrate("Value is [UNKNOWN_99].", &HashMap::new());
         assert_eq!(result, "Value is [UNKNOWN_99].");
-        assert_eq!(count, 0);
+        assert_eq!(hits, 0);
+        assert_eq!(misses, 1);
     }
 
     #[test]
     fn repeated_placeholder() {
         let map = HashMap::from([("[EMAIL_1]".to_string(), "a@b.com".to_string())]);
-        let (result, count) = BatchRehydrator.rehydrate("[EMAIL_1] sent to [EMAIL_1]", &map);
+        let (result, hits, misses) =
+            BatchRehydrator.rehydrate("[EMAIL_1] sent to [EMAIL_1]", &map);
         assert_eq!(result, "a@b.com sent to a@b.com");
-        assert_eq!(count, 2);
+        assert_eq!(hits, 2);
+        assert_eq!(misses, 0);
     }
 }
 

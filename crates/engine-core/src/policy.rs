@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::entities::EntityType;
+use crate::{entities::EntityType, modality::Modality};
 
 // ---------------------------------------------------------------------------
 // Decision
@@ -11,18 +11,6 @@ pub enum Decision {
     Mask,
     Skip,
     FailClosed,
-}
-
-// ---------------------------------------------------------------------------
-// Modality
-// ---------------------------------------------------------------------------
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum Modality {
-    #[default]
-    Prose,
-    Code,
-    Document,
 }
 
 // ---------------------------------------------------------------------------

@@ -28,10 +28,22 @@ message DetectResponse {
     repeated DetectedSpan spans         = 2;
 }
 
+// Provenance hint for modality routing (D9).
+// Both channel_id AND modality_hint must be set for the Code lane to activate;
+// the gateway sets channel_id from an authenticated API-key attribute.
+enum ModalityHint {
+    MODALITY_UNSPECIFIED = 0;
+    MODALITY_CODE        = 1;
+    MODALITY_DOCUMENT    = 2;
+}
+
 message MaskRequest {
-    string text            = 1;
-    string correlation_id  = 2;
-    string conversation_id = 3;
+    string       text            = 1;
+    string       correlation_id  = 2;
+    string       conversation_id = 3;
+    // Provenance fields — set by the gateway, never trusted from client payload.
+    string       channel_id      = 4;
+    ModalityHint modality_hint   = 5;
 }
 
 message MaskResponse {

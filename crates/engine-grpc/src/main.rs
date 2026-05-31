@@ -5,9 +5,13 @@ Runs on a Unix domain socket (`/run/engine/engine.sock`) by default for
 localhost-only, zero-network PII exposure (D1). Falls back to TCP when the
 `ENGINE_LISTEN_ADDR` env var is set (e.g., for integration tests).
 
-Stream sessions (streaming rehydration) are stored in a `DashMap`-like
-`Mutex<HashMap>` keyed by `stream_id`. Each session is owned by a single
-client stream; no cross-session sharing.
+Stream sessions (streaming rehydration) are stored in a `Mutex<HashMap>`
+keyed by `stream_id`. Each session is owned by a single client stream;
+no cross-session sharing.
+
+Observability (D17):
+  - Prometheus metrics endpoint on `ENGINE_METRICS_ADDR` (default 0.0.0.0:9090)
+  - Structured logging via `tracing` / `tracing-subscriber`
 */
 
 use std::{
@@ -18,7 +22,7 @@ use std::{
 use tonic::{transport::Server, Request, Response, Status};
 use uuid::Uuid;
 
-use engine_core::Engine;
+use engine_core::{Engine, ProvenanceCtx};
 
 pub mod proto {
     tonic::include_proto!("engine.v1");
@@ -28,7 +32,7 @@ use proto::{
     engine_service_server::{EngineService, EngineServiceServer},
     DeleteVaultEntryRequest, DeleteVaultEntryResponse, DetectRequest, DetectResponse,
     DetectedSpan as ProtoSpan, HealthRequest, HealthResponse, MaskRequest, MaskResponse,
-    RehydrateChunkRequest, RehydrateChunkResponse, RehydrateRequest, RehydrateResponse,
+    ModalityHint, RehydrateChunkRequest, RehydrateChunkResponse, RehydrateRequest, RehydrateResponse,
 };
 
 const VERSION: &str = "0.1.0";
@@ -102,7 +106,22 @@ impl EngineService for EngineServer {
         let cid = (!req.correlation_id.is_empty()).then(|| req.correlation_id.as_str());
         let conv = (!req.conversation_id.is_empty()).then(|| req.conversation_id.as_str());
 
-        let result = self.engine.mask(&req.text, cid, conv);
+        let result = if req.channel_id.is_empty() {
+            self.engine.mask(&req.text, cid, conv)
+        } else {
+            // Gateway has set a channel_id — apply provenance-aware routing (D9).
+            let hint = match ModalityHint::try_from(req.modality_hint) {
+                Ok(ModalityHint::ModalityCode) => Some(engine_core::Modality::Code),
+                Ok(ModalityHint::ModalityDocument) => Some(engine_core::Modality::Document),
+                _ => None,
+            };
+            let provenance = ProvenanceCtx {
+                channel_id: Some(req.channel_id),
+                app_id: None,
+                hint,
+            };
+            self.engine.mask_with_provenance(&req.text, cid, conv, &provenance)
+        };
 
         let was_masked = result.was_masked();
         Ok(Response::new(MaskResponse {
@@ -154,7 +173,7 @@ impl EngineService for EngineServer {
 
         let output = if req.is_final {
             let out = format!("{}{}", rehydrator.feed(&req.chunk), rehydrator.flush());
-            drop(rehydrator);
+            let _ = rehydrator;
             sessions.remove(&stream_id);
             out
         } else {
@@ -178,18 +197,66 @@ impl EngineService for EngineServer {
 }
 
 // ---------------------------------------------------------------------------
+// Metrics HTTP server (Prometheus scrape endpoint)
+// ---------------------------------------------------------------------------
+
+async fn serve_metrics(
+    addr: std::net::SocketAddr,
+    handle: metrics_exporter_prometheus::PrometheusHandle,
+) {
+    use tokio::io::AsyncWriteExt;
+    use tokio::net::TcpListener;
+
+    let listener = TcpListener::bind(addr).await
+        .unwrap_or_else(|e| panic!("metrics bind {addr}: {e}"));
+    tracing::info!("metrics endpoint at http://{addr}/metrics");
+
+    loop {
+        let Ok((mut stream, _)) = listener.accept().await else { continue };
+        let body = handle.render();
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: text/plain; version=0.0.4; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        let _ = stream.write_all(response.as_bytes()).await;
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Structured logging.
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::from_default_env()
+                .add_directive(tracing::Level::INFO.into()),
+        )
+        .init();
+
+    // Prometheus metrics recorder — must be installed before any metrics are recorded.
+    let prometheus_handle = metrics_exporter_prometheus::PrometheusBuilder::new()
+        .install_recorder()
+        .expect("failed to install Prometheus recorder");
+
+    let metrics_addr: std::net::SocketAddr = std::env::var("ENGINE_METRICS_ADDR")
+        .unwrap_or_else(|_| "0.0.0.0:9090".to_string())
+        .parse()
+        .expect("invalid ENGINE_METRICS_ADDR");
+
+    tokio::spawn(serve_metrics(metrics_addr, prometheus_handle));
+
+    // gRPC server.
     let engine = Engine::with_default_policy();
     let service = EngineServer::new(engine);
 
     let addr = std::env::var("ENGINE_LISTEN_ADDR")
         .unwrap_or_else(|_| "0.0.0.0:50051".to_string());
 
-    eprintln!("engine-grpc listening on {addr}");
+    tracing::info!("engine-grpc listening on {addr}");
 
     Server::builder()
         .add_service(EngineServiceServer::new(service))
