@@ -39,7 +39,7 @@ impl Masker {
 
         // Backward pass: replace spans right-to-left.
         let mut sorted_bwd = sorted_fwd;
-        sorted_bwd.sort_by(|a, b| b.start.cmp(&a.start));
+        sorted_bwd.sort_by_key(|s| std::cmp::Reverse(s.start));
 
         let mut chars: Vec<u8> = text.as_bytes().to_vec();
         for span in sorted_bwd {
