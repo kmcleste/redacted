@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package engine.v1;
+
+service EngineService {
+    rpc Detect(DetectRequest) returns (DetectResponse);
+    rpc Mask(MaskRequest) returns (MaskResponse);
+    rpc Rehydrate(RehydrateRequest) returns (RehydrateResponse);
+    rpc RehydrateChunk(RehydrateChunkRequest) returns (RehydrateChunkResponse);
+    rpc DeleteVaultEntry(DeleteVaultEntryRequest) returns (DeleteVaultEntryResponse);
+    rpc Health(HealthRequest) returns (HealthResponse);
+}
+
+message DetectRequest {
+    string text           = 1;
+    string correlation_id = 2;
+}
+
+message DetectedSpan {
+    uint32 start       = 1;
+    uint32 end         = 2;
+    string entity_type = 3;
+    float  score       = 4;
+}
+
+message DetectResponse {
+    string               correlation_id = 1;
+    repeated DetectedSpan spans         = 2;
+}
+
+message MaskRequest {
+    string text            = 1;
+    string correlation_id  = 2;
+    string conversation_id = 3;
+}
+
+message MaskResponse {
+    string            masked_text    = 1;
+    string            correlation_id = 2;
+    map<string,uint32> entity_counts = 3;
+    bool              was_masked     = 4;
+}
+
+message RehydrateRequest {
+    string text            = 1;
+    string correlation_id  = 2;
+    string conversation_id = 3;
+}
+
+message RehydrateResponse {
+    string rehydrated_text  = 1;
+    string correlation_id   = 2;
+    uint32 rehydrated_count = 3;
+}
+
+message RehydrateChunkRequest {
+    string chunk           = 1;
+    string correlation_id  = 2;
+    string stream_id       = 3;
+    string conversation_id = 4;
+    bool   is_final        = 5;
+}
+
+message RehydrateChunkResponse {
+    string chunk     = 1;
+    string stream_id = 2;
+    bool   is_final  = 3;
+}
+
+message DeleteVaultEntryRequest {
+    string correlation_id = 1;
+}
+
+message DeleteVaultEntryResponse {
+    bool deleted = 1;
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+    string status  = 1;
+    string version = 2;
+}

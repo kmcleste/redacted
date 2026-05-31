@@ -1,0 +1,31 @@
+[workspace]
+members = [
+    "crates/engine-core",
+    "crates/engine-ffi",
+    "crates/engine-grpc",
+]
+resolver = "2"
+
+[workspace.package]
+version    = "0.1.0"
+edition    = "2021"
+license    = "UNLICENSED"
+
+[workspace.dependencies]
+# Shared across crates — single version pin for the whole workspace.
+regex           = "1"
+aho-corasick    = "1"
+chacha20poly1305 = "0.10"
+rand            = "0.8"
+uuid            = { version = "1", features = ["v4", "fast-rng"] }
+smallvec        = "1"
+thiserror       = "1"
+serde           = { version = "1", features = ["derive"] }
+ipnet           = "2"
+once_cell       = "1"
+# gRPC / async
+tonic           = "0.12"
+prost           = "0.13"
+tokio           = { version = "1", features = ["full"] }
+# FFI helpers
+safer-ffi-gen   = "0.9"

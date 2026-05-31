@@ -1,0 +1,200 @@
+/*!
+gRPC sidecar server for the sensitive-content engine.
+
+Runs on a Unix domain socket (`/run/engine/engine.sock`) by default for
+localhost-only, zero-network PII exposure (D1). Falls back to TCP when the
+`ENGINE_LISTEN_ADDR` env var is set (e.g., for integration tests).
+
+Stream sessions (streaming rehydration) are stored in a `DashMap`-like
+`Mutex<HashMap>` keyed by `stream_id`. Each session is owned by a single
+client stream; no cross-session sharing.
+*/
+
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
+
+use tonic::{transport::Server, Request, Response, Status};
+use uuid::Uuid;
+
+use engine_core::Engine;
+
+pub mod proto {
+    tonic::include_proto!("engine.v1");
+}
+
+use proto::{
+    engine_service_server::{EngineService, EngineServiceServer},
+    DeleteVaultEntryRequest, DeleteVaultEntryResponse, DetectRequest, DetectResponse,
+    DetectedSpan as ProtoSpan, HealthRequest, HealthResponse, MaskRequest, MaskResponse,
+    RehydrateChunkRequest, RehydrateChunkResponse, RehydrateRequest, RehydrateResponse,
+};
+
+const VERSION: &str = "0.1.0";
+
+// ---------------------------------------------------------------------------
+// Server state
+// ---------------------------------------------------------------------------
+
+struct EngineServer {
+    engine: Engine,
+    /// In-process map of stream_id → StreamingRehydrator.
+    /// One Mutex guards the whole map; contention is low (each stream is short-lived).
+    stream_sessions: Arc<Mutex<HashMap<String, engine_core::StreamingRehydrator>>>,
+}
+
+impl EngineServer {
+    fn new(engine: Engine) -> Self {
+        Self {
+            engine,
+            stream_sessions: Arc::new(Mutex::new(HashMap::new())),
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// gRPC service implementation
+// ---------------------------------------------------------------------------
+
+#[tonic::async_trait]
+impl EngineService for EngineServer {
+    async fn health(
+        &self,
+        _req: Request<HealthRequest>,
+    ) -> Result<Response<HealthResponse>, Status> {
+        Ok(Response::new(HealthResponse {
+            status: "ok".into(),
+            version: VERSION.into(),
+        }))
+    }
+
+    async fn detect(
+        &self,
+        req: Request<DetectRequest>,
+    ) -> Result<Response<DetectResponse>, Status> {
+        let req = req.into_inner();
+        let correlation_id = if req.correlation_id.is_empty() {
+            Uuid::new_v4().to_string()
+        } else {
+            req.correlation_id
+        };
+
+        let spans = self.engine.detect(&req.text);
+        let proto_spans: Vec<ProtoSpan> = spans
+            .iter()
+            .map(|s| ProtoSpan {
+                start: s.start as u32,
+                end: s.end as u32,
+                entity_type: s.entity_type.as_str().to_string(),
+                score: s.score,
+            })
+            .collect();
+
+        Ok(Response::new(DetectResponse {
+            correlation_id,
+            spans: proto_spans,
+        }))
+    }
+
+    async fn mask(&self, req: Request<MaskRequest>) -> Result<Response<MaskResponse>, Status> {
+        let req = req.into_inner();
+        let cid = (!req.correlation_id.is_empty()).then(|| req.correlation_id.as_str());
+        let conv = (!req.conversation_id.is_empty()).then(|| req.conversation_id.as_str());
+
+        let result = self.engine.mask(&req.text, cid, conv);
+
+        let was_masked = result.was_masked();
+        Ok(Response::new(MaskResponse {
+            masked_text: result.text,
+            correlation_id: result.correlation_id,
+            entity_counts: result
+                .entity_counts
+                .into_iter()
+                .map(|(k, v)| (k.as_str().to_string(), v as u32))
+                .collect(),
+            was_masked,
+        }))
+    }
+
+    async fn rehydrate(
+        &self,
+        req: Request<RehydrateRequest>,
+    ) -> Result<Response<RehydrateResponse>, Status> {
+        let req = req.into_inner();
+        let conv = (!req.conversation_id.is_empty()).then(|| req.conversation_id.as_str());
+
+        let result = self.engine.rehydrate(&req.text, &req.correlation_id, conv);
+
+        Ok(Response::new(RehydrateResponse {
+            rehydrated_text: result.text,
+            correlation_id: result.correlation_id,
+            rehydrated_count: result.rehydrated_count as u32,
+        }))
+    }
+
+    async fn rehydrate_chunk(
+        &self,
+        req: Request<RehydrateChunkRequest>,
+    ) -> Result<Response<RehydrateChunkResponse>, Status> {
+        let req = req.into_inner();
+        let stream_id = req.stream_id.clone();
+        let conv = (!req.conversation_id.is_empty()).then(|| req.conversation_id.as_str());
+
+        let mut sessions = self.stream_sessions.lock().map_err(|_| {
+            Status::internal("stream session lock poisoned")
+        })?;
+
+        if !sessions.contains_key(&stream_id) {
+            let rehydrator = self.engine.streaming_rehydrator(&req.correlation_id, conv);
+            sessions.insert(stream_id.clone(), rehydrator);
+        }
+
+        let rehydrator = sessions.get_mut(&stream_id).unwrap();
+
+        let output = if req.is_final {
+            let out = format!("{}{}", rehydrator.feed(&req.chunk), rehydrator.flush());
+            drop(rehydrator);
+            sessions.remove(&stream_id);
+            out
+        } else {
+            rehydrator.feed(&req.chunk)
+        };
+
+        Ok(Response::new(RehydrateChunkResponse {
+            chunk: output,
+            stream_id,
+            is_final: req.is_final,
+        }))
+    }
+
+    async fn delete_vault_entry(
+        &self,
+        req: Request<DeleteVaultEntryRequest>,
+    ) -> Result<Response<DeleteVaultEntryResponse>, Status> {
+        let deleted = self.engine.delete_vault_entry(&req.into_inner().correlation_id);
+        Ok(Response::new(DeleteVaultEntryResponse { deleted }))
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let engine = Engine::with_default_policy();
+    let service = EngineServer::new(engine);
+
+    let addr = std::env::var("ENGINE_LISTEN_ADDR")
+        .unwrap_or_else(|_| "0.0.0.0:50051".to_string());
+
+    eprintln!("engine-grpc listening on {addr}");
+
+    Server::builder()
+        .add_service(EngineServiceServer::new(service))
+        .serve(addr.parse()?)
+        .await?;
+
+    Ok(())
+}

@@ -1,0 +1,18 @@
+[package]
+name    = "engine-grpc"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "engine-grpc"
+path = "src/main.rs"
+
+[dependencies]
+engine-core = { path = "../engine-core" }
+tonic       = { workspace = true }
+prost       = { workspace = true }
+tokio       = { workspace = true }
+uuid        = { workspace = true }
+
+[build-dependencies]
+tonic-build = "0.12"
