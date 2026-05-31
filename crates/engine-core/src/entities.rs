@@ -5,7 +5,10 @@ use std::fmt;
 // EntityType
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum EntityType {
     // Structured PII
     Ssn,

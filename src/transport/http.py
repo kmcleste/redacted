@@ -21,11 +21,12 @@ For SSE streaming of LLM responses, the typical integration is:
 
 from __future__ import annotations
 
+import json
 import uuid
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Response, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 from ..engine.pipeline import Engine
@@ -179,6 +180,54 @@ def create_app(policy: PolicyBundle | None = None) -> FastAPI:
         if not deleted:
             raise HTTPException(status_code=404, detail="Vault entry not found or already expired.")
         return Response(status_code=204)
+
+    # ------------------------------------------------------------------ #
+    # WebSocket streaming rehydration
+    #
+    # Client sends JSON frames:
+    #   {"chunk": "...", "correlation_id": "...", "is_final": false}
+    #   {"chunk": "...", "conversation_id": "...", "is_final": true}
+    #
+    # Server replies with:
+    #   {"chunk": "...", "stream_id": "...", "is_final": false}
+    # ------------------------------------------------------------------ #
+
+    @app.websocket("/v1/ws/rehydrate/{stream_id}")
+    async def ws_rehydrate(websocket: WebSocket, stream_id: str) -> None:
+        await websocket.accept()
+        rehydrator: StreamingRehydrator | None = None
+        try:
+            while True:
+                raw = await websocket.receive_text()
+                frame: dict[str, object] = json.loads(raw)
+                chunk = str(frame.get("chunk", ""))
+                correlation_id = str(frame.get("correlation_id", ""))
+                conversation_id_raw = frame.get("conversation_id")
+                conversation_id = str(conversation_id_raw) if conversation_id_raw else None
+                is_final = bool(frame.get("is_final", False))
+
+                if rehydrator is None:
+                    rehydrator = engine.streaming_rehydrator(
+                        correlation_id,
+                        conversation_id=conversation_id,
+                    )
+
+                if is_final:
+                    output = rehydrator.feed(chunk) + rehydrator.flush()
+                    if stream_id in stream_sessions:
+                        del stream_sessions[stream_id]
+                else:
+                    output = rehydrator.feed(chunk)
+
+                await websocket.send_text(
+                    json.dumps({"chunk": output, "stream_id": stream_id, "is_final": is_final})
+                )
+                if is_final:
+                    break
+        except WebSocketDisconnect:
+            pass
+        except Exception:
+            await websocket.close(code=1011)
 
     return app
 

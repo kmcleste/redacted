@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use serde::{Deserialize, Serialize};
+
 use crate::{entities::EntityType, modality::Modality};
 
 // ---------------------------------------------------------------------------
@@ -17,7 +19,7 @@ pub enum Decision {
 // Per-entity policy
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EntityPolicy {
     pub enabled: bool,
     pub threshold: f32,
@@ -66,7 +68,7 @@ fn default_threshold(et: EntityType) -> f32 {
 // PolicyBundle
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolicyBundle {
     pub version: String,
     pub default_fail_closed: bool,

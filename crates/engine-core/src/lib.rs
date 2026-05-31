@@ -1,3 +1,4 @@
+pub mod audit;
 pub mod detectors;
 pub mod entities;
 pub mod error;

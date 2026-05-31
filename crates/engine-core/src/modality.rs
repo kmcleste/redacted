@@ -16,7 +16,7 @@ cannot move a request into the relaxed lane.
 use std::collections::HashSet;
 
 /// The resolved modality for a single request.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Modality {
     /// Default: full PII + PHI + secrets scan.
     Prose,
@@ -42,6 +42,7 @@ pub struct ProvenanceCtx {
 /// Set of channel IDs that are authorised for the relaxed code-traffic policy.
 /// In Phase 3 this lives in the control-plane policy bundle; here it's a local
 /// allowlist loaded at startup.
+#[derive(Clone)]
 pub struct TrustedCodeChannels(HashSet<String>);
 
 impl TrustedCodeChannels {

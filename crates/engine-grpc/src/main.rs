@@ -22,7 +22,7 @@ use std::{
 use tonic::{transport::Server, Request, Response, Status};
 use uuid::Uuid;
 
-use engine_core::{Engine, ProvenanceCtx};
+use engine_core::{Engine, PolicyBundle, ProvenanceCtx};
 
 pub mod proto {
     tonic::include_proto!("engine.v1");
@@ -257,8 +257,73 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tokio::spawn(serve_metrics(metrics_addr, prometheus_handle));
 
-    // gRPC server.
-    let engine = Engine::with_default_policy();
+    // Build engine — load policy from file if ENGINE_POLICY_FILE is set.
+    let engine = if let Ok(path) = std::env::var("ENGINE_POLICY_FILE") {
+        match std::fs::read_to_string(&path)
+            .map_err(|e| e.to_string())
+            .and_then(|s| serde_json::from_str::<PolicyBundle>(&s).map_err(|e| e.to_string()))
+        {
+            Ok(policy) => {
+                tracing::info!(path = %path, "loaded policy from file");
+                Engine::new(policy)
+            }
+            Err(e) => {
+                tracing::warn!(path = %path, error = %e, "failed to load policy file, using default");
+                Engine::with_default_policy()
+            }
+        }
+    } else {
+        Engine::with_default_policy()
+    };
+
+    // Background vault purge — evict expired entries every 60 s.
+    {
+        let purge_engine = engine.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
+            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+            loop {
+                interval.tick().await;
+                let n = purge_engine.purge_expired();
+                if n > 0 {
+                    tracing::debug!(purged = n, "vault: purged expired entries");
+                }
+            }
+        });
+    }
+
+    // Policy hot-reload on SIGHUP (Unix only).
+    #[cfg(unix)]
+    {
+        let reload_engine = engine.clone();
+        tokio::spawn(async move {
+            use tokio::signal::unix::{signal, SignalKind};
+            let mut sig = signal(SignalKind::hangup()).expect("failed to install SIGHUP handler");
+            while sig.recv().await.is_some() {
+                let path = match std::env::var("ENGINE_POLICY_FILE") {
+                    Ok(p) => p,
+                    Err(_) => {
+                        tracing::warn!("SIGHUP: ENGINE_POLICY_FILE not set, skipping reload");
+                        continue;
+                    }
+                };
+                match std::fs::read_to_string(&path)
+                    .map_err(|e| e.to_string())
+                    .and_then(|s| {
+                        serde_json::from_str::<PolicyBundle>(&s).map_err(|e| e.to_string())
+                    }) {
+                    Ok(policy) => {
+                        reload_engine.reload_policy(policy);
+                        tracing::info!(path = %path, "policy hot-reloaded via SIGHUP");
+                    }
+                    Err(e) => {
+                        tracing::error!(path = %path, error = %e, "SIGHUP: policy reload failed");
+                    }
+                }
+            }
+        });
+    }
+
     let service = EngineServer::new(engine);
 
     let addr = std::env::var("ENGINE_LISTEN_ADDR").unwrap_or_else(|_| "0.0.0.0:50051".to_string());
