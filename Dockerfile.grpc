@@ -1,0 +1,53 @@
+# syntax=docker/dockerfile:1
+# ---------------------------------------------------------------------------
+# Stage 1 — build the engine-grpc binary
+# ---------------------------------------------------------------------------
+FROM rust:1-slim-bookworm AS builder
+
+RUN apt-get update -q && apt-get install -y -q --no-install-recommends \
+        protobuf-compiler \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+# Layer the dependency compilation before copying source so that source
+# changes don't bust the dependency cache.
+COPY Cargo.toml Cargo.lock ./
+COPY crates/engine-core/Cargo.toml   crates/engine-core/Cargo.toml
+COPY crates/engine-ffi/Cargo.toml    crates/engine-ffi/Cargo.toml
+COPY crates/engine-grpc/Cargo.toml   crates/engine-grpc/Cargo.toml
+COPY crates/engine-grpc/build.rs     crates/engine-grpc/build.rs
+COPY crates/engine-grpc/proto/       crates/engine-grpc/proto/
+
+# Stub out source files so Cargo can build the dependency graph.
+RUN mkdir -p crates/engine-core/src crates/engine-ffi/src crates/engine-grpc/src \
+    && echo "pub fn _stub() {}" > crates/engine-core/src/lib.rs \
+    && echo "pub fn _stub() {}" > crates/engine-ffi/src/lib.rs \
+    && echo "fn main() {}" > crates/engine-grpc/src/main.rs
+
+RUN cargo build --release -p engine-grpc 2>&1 | tail -5 || true
+
+# Now copy real source and rebuild only changed crates.
+COPY crates/ crates/
+RUN touch crates/engine-core/src/lib.rs \
+          crates/engine-ffi/src/lib.rs \
+          crates/engine-grpc/src/main.rs \
+    && cargo build --release -p engine-grpc
+
+# ---------------------------------------------------------------------------
+# Stage 2 — minimal runtime image
+# ---------------------------------------------------------------------------
+FROM debian:bookworm-slim AS runtime
+
+RUN apt-get update -q && apt-get install -y -q --no-install-recommends \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /build/target/release/engine-grpc /usr/local/bin/engine-grpc
+
+ENV ENGINE_LISTEN_ADDR=0.0.0.0:50051 \
+    ENGINE_METRICS_ADDR=0.0.0.0:9090
+
+EXPOSE 50051 9090
+
+ENTRYPOINT ["engine-grpc"]

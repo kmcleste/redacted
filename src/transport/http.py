@@ -183,3 +183,7 @@ def create_app(policy: PolicyBundle | None = None) -> FastAPI:
         return Response(status_code=204)
 
     return app
+
+
+# Module-level ASGI app for uvicorn / gunicorn discovery.
+app = create_app()
