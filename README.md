@@ -120,11 +120,11 @@ suppressed). Content can never self-declare into a relaxed policy.
 ```bash
 # gRPC sidecar
 docker run --rm -p 50051:50051 -p 9090:9090 \
-  gcr.io/<project>/engine-grpc:latest
+  ghcr.io/kmcleste/engine-grpc:latest
 
 # Python HTTP API
 docker run --rm -p 8000:8000 \
-  gcr.io/<project>/engine-api:latest
+  ghcr.io/kmcleste/engine-api:latest
 ```
 
 ### Build from source
@@ -307,16 +307,11 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push and PR to
 |---|---|
 | **rust** | `cargo fmt --check` · `cargo clippy -D warnings` · `cargo build --locked` · `cargo test --locked` |
 | **python** (3.11 + 3.12) | `ruff check` · `mypy` · `pytest --cov-fail-under=80` |
-| **docker** (push to main only) | Build `engine-grpc` + `engine-api`, push to GCR tagged `:latest` + `:<sha>` |
+| **docker** (push to main only) | Build `engine-grpc` + `engine-api`, push to GHCR tagged `:latest` + `:<sha>` |
 
-### Docker / GCR setup
+### Docker / GHCR
 
-Three values must be configured in repository settings before the first push:
-
-| Kind | Name | Value |
-|---|---|---|
-| Variable | `GCP_PROJECT` | GCP project ID |
-| Secret | `WIF_PROVIDER` | Workload Identity provider resource name |
-| Secret | `WIF_SERVICE_ACCOUNT` | Service-account email with GCR push permission |
-
-Workload Identity Federation is used (no long-lived service account keys).
+No secrets to configure. The workflow authenticates to
+`ghcr.io` using the built-in `GITHUB_TOKEN` with `packages: write` permission.
+Images are published to `ghcr.io/kmcleste/<image>` and are private by default;
+visibility can be changed in **Settings → Packages**.

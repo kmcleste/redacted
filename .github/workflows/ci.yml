@@ -97,17 +97,11 @@ jobs:
             --cov-fail-under=80
 
   # ---------------------------------------------------------------------------
-  # Docker — build & push to GCR
+  # Docker — build & push to GitHub Container Registry (ghcr.io)
   #
-  # Required GitHub configuration:
-  #   Variables (Settings → Secrets and variables → Variables):
-  #     GCP_PROJECT          — GCP project ID (e.g. my-project-123)
-  #
-  #   Secrets (Settings → Secrets and variables → Actions):
-  #     WIF_PROVIDER         — Workload Identity provider resource name
-  #                            projects/<n>/locations/global/workloadIdentityPools/<pool>/providers/<prov>
-  #     WIF_SERVICE_ACCOUNT  — SA email allowed to push to GCR
-  #                            e.g. github-actions@<project>.iam.gserviceaccount.com
+  # No secrets to configure — uses the built-in GITHUB_TOKEN.
+  # Images are published to ghcr.io/kmcleste/<image> and are
+  # private by default (visibility can be changed in Package settings).
   #
   # Runs only on push to main (not on pull-request branches).
   # ---------------------------------------------------------------------------
@@ -119,7 +113,7 @@ jobs:
 
     permissions:
       contents: read
-      id-token: write   # required for Workload Identity Federation
+      packages: write   # required to push to ghcr.io
 
     strategy:
       fail-fast: false
@@ -133,14 +127,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Authenticate to Google Cloud (WIF)
-        uses: google-github-actions/auth@v2
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
-          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
-
-      - name: Configure Docker credential helper for GCR
-        run: gcloud auth configure-docker gcr.io --quiet
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -149,9 +141,9 @@ jobs:
         id: tags
         run: |
           SHORT_SHA="${GITHUB_SHA::8}"
-          REPO="gcr.io/${{ vars.GCP_PROJECT }}/${{ matrix.image }}"
-          echo "latest=${REPO}:latest"       >> "$GITHUB_OUTPUT"
-          echo "sha=${REPO}:${SHORT_SHA}"    >> "$GITHUB_OUTPUT"
+          REPO="ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}"
+          echo "latest=${REPO}:latest"    >> "$GITHUB_OUTPUT"
+          echo "sha=${REPO}:${SHORT_SHA}" >> "$GITHUB_OUTPUT"
 
       - name: Build & push ${{ matrix.image }}
         uses: docker/build-push-action@v6
@@ -162,7 +154,5 @@ jobs:
           tags: |
             ${{ steps.tags.outputs.latest }}
             ${{ steps.tags.outputs.sha }}
-          # Re-use GitHub Actions cache across builds to avoid paying for
-          # full Rust/pip dependency compilation on every push.
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,scope=${{ matrix.image }},mode=max
