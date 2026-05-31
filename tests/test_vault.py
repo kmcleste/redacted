@@ -1,7 +1,9 @@
 """Tests for the Vault."""
 
 import time
+
 import pytest
+
 from src.engine.vault import Vault, VaultExpiredError, VaultNotFoundError
 
 

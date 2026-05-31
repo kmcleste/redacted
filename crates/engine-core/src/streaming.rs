@@ -9,8 +9,8 @@ Solution: a bounded-lookahead state machine.
 States:
   - Normal    — scan for `[`; everything before it is safe to emit.
   - InBracket — buffer bytes after `[` until:
-      a) `]` found → lookup in map: hit → emit original, miss → emit buffer.
-      b) buffer exceeds `max_placeholder_len` → emit first byte, retry.
+    a) `]` found → lookup in map: hit → emit original, miss → emit buffer.
+    b) buffer exceeds `max_placeholder_len` → emit first byte, retry.
 
 The buffer is always bounded: max `max_placeholder_len + 1` bytes.
 No heap growth from adversarial input.
@@ -33,7 +33,12 @@ pub struct StreamingRehydrator {
 
 impl StreamingRehydrator {
     pub fn new(map: HashMap<String, String>) -> Self {
-        let max_len = map.keys().map(|k| k.len()).max().unwrap_or(HARD_MAX).min(HARD_MAX);
+        let max_len = map
+            .keys()
+            .map(|k| k.len())
+            .max()
+            .unwrap_or(HARD_MAX)
+            .min(HARD_MAX);
         Self {
             map,
             max_len,

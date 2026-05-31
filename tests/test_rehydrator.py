@@ -1,6 +1,5 @@
 """Tests for batch rehydrator."""
 
-import pytest
 from src.engine.rehydrator import BatchRehydrator
 
 

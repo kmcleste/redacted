@@ -28,14 +28,14 @@ pub fn digit_isolated(text: &str, start: usize, end: usize) -> bool {
 pub fn word_boundary_start(text: &str, start: usize) -> bool {
     text.as_bytes()
         .get(start.wrapping_sub(1))
-        .map_or(true, |&b| !b.is_ascii_alphanumeric() && b != b'_')
+        .is_none_or(|&b| !b.is_ascii_alphanumeric() && b != b'_')
 }
 
 /// Checks that the byte after `end` is not alphanumeric or `_`.
 pub fn word_boundary_end(text: &str, end: usize) -> bool {
     text.as_bytes()
         .get(end)
-        .map_or(true, |&b| !b.is_ascii_alphanumeric() && b != b'_')
+        .is_none_or(|&b| !b.is_ascii_alphanumeric() && b != b'_')
 }
 
 pub fn word_boundary(text: &str, start: usize, end: usize) -> bool {
@@ -47,9 +47,14 @@ pub fn context_window(text: &str, byte_pos: usize, window: usize) -> &str {
     let lo_raw = byte_pos.saturating_sub(window);
     let hi_raw = (byte_pos + window).min(text.len());
     // Advance lo_raw forward to the nearest char boundary.
-    let lo = (lo_raw..=byte_pos).find(|&p| text.is_char_boundary(p)).unwrap_or(lo_raw);
+    let lo = (lo_raw..=byte_pos)
+        .find(|&p| text.is_char_boundary(p))
+        .unwrap_or(lo_raw);
     // Retreat hi_raw backward to the nearest char boundary.
-    let hi = (byte_pos..=hi_raw).rev().find(|&p| text.is_char_boundary(p)).unwrap_or(hi_raw);
+    let hi = (byte_pos..=hi_raw)
+        .rev()
+        .find(|&p| text.is_char_boundary(p))
+        .unwrap_or(hi_raw);
     &text[lo..hi]
 }
 
@@ -98,13 +103,11 @@ pub static CC_DISCOVER: Lazy<Regex> = Lazy::new(|| {
 /// 9-digit sequences (ABA routing — always requires context keyword).
 pub static NINE_DIGITS: Lazy<Regex> = Lazy::new(|| Regex::new(r"\d{9}").unwrap());
 
-pub static BANK_ROUTING_CONTEXT: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"(?i)\b(?:routing|aba|transit|rtn|bank[\s\-]?routing)\b").unwrap()
-});
+pub static BANK_ROUTING_CONTEXT: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?i)\b(?:routing|aba|transit|rtn|bank[\s\-]?routing)\b").unwrap());
 
 /// 8–17 digit sequences (bank account — always requires context keyword).
-pub static EIGHT_TO_17_DIGITS: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\d{8,17}").unwrap());
+pub static EIGHT_TO_17_DIGITS: Lazy<Regex> = Lazy::new(|| Regex::new(r"\d{8,17}").unwrap());
 
 pub static BANK_ACCOUNT_CONTEXT: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"(?i)\b(?:account[\s\-]?(?:number|num|no|#)|acct[\s\-]?(?:number|num|no|#)?)\b")
@@ -142,17 +145,15 @@ pub static IPV4: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}").unwrap());
 
 /// IPv6 — full form only for now; compressed forms handled by validator.
-pub static IPV6: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{1,4}){7}").unwrap()
-});
+pub static IPV6: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{1,4}){7}").unwrap());
 
 // ---------------------------------------------------------------------------
 // VIN
 // ---------------------------------------------------------------------------
 
 /// 17 uppercase alphanumeric characters, no I/O/Q.
-pub static VIN: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"[A-HJ-NPR-Z0-9]{17}").unwrap());
+pub static VIN: Lazy<Regex> = Lazy::new(|| Regex::new(r"[A-HJ-NPR-Z0-9]{17}").unwrap());
 
 // ---------------------------------------------------------------------------
 // NPI (10 digits — Luhn-validated in code)
@@ -167,22 +168,18 @@ pub static NPI_CONTEXT: Lazy<Regex> = Lazy::new(|| {
 // Domain / insurance identifiers (all require context keywords)
 // ---------------------------------------------------------------------------
 
-pub static POLICY_NUMBER: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"[A-Z]{2,4}-?\d{6,12}").unwrap());
+pub static POLICY_NUMBER: Lazy<Regex> = Lazy::new(|| Regex::new(r"[A-Z]{2,4}-?\d{6,12}").unwrap());
 pub static POLICY_CONTEXT: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"(?i)\b(?:policy[\s\-]?(?:number|num|no|#)|policy[\s\-]?id)\b").unwrap()
 });
 
-pub static CLAIM_ID: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"[A-Z]{2,3}-?\d{7,12}").unwrap());
-pub static CLAIM_CONTEXT: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"(?i)\b(?:claim[\s\-]?(?:number|num|no|#|id))\b").unwrap()
-});
+pub static CLAIM_ID: Lazy<Regex> = Lazy::new(|| Regex::new(r"[A-Z]{2,3}-?\d{7,12}").unwrap());
+pub static CLAIM_CONTEXT: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?i)\b(?:claim[\s\-]?(?:number|num|no|#|id))\b").unwrap());
 
 pub static MEMBER_ID: Lazy<Regex> = Lazy::new(|| Regex::new(r"[A-Z]{1,3}\d{6,12}").unwrap());
-pub static MEMBER_CONTEXT: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"(?i)\b(?:member[\s\-]?(?:id|number|no|#))\b").unwrap()
-});
+pub static MEMBER_CONTEXT: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?i)\b(?:member[\s\-]?(?:id|number|no|#))\b").unwrap());
 
 // ---------------------------------------------------------------------------
 // Date of birth (PHI)

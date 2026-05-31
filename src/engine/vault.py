@@ -18,9 +18,8 @@ from __future__ import annotations
 
 import os
 import time
-from base64 import urlsafe_b64encode
 
-from cryptography.fernet import Fernet, InvalidToken
+from cryptography.fernet import Fernet
 
 
 class VaultExpiredError(Exception):
@@ -59,7 +58,8 @@ class _VaultEntry:
         self._encrypted_map[placeholder] = self._fernet.encrypt(original.encode())
 
     def __repr__(self) -> str:
-        return f"<VaultEntry keys={list(self._encrypted_map.keys())} expires_in={self._expires_at - time.monotonic():.1f}s>"
+        elapsed = self._expires_at - time.monotonic()
+        return f"<VaultEntry keys={list(self._encrypted_map.keys())} expires_in={elapsed:.1f}s>"
 
 
 class Vault:

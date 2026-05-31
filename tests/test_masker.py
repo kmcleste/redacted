@@ -1,8 +1,7 @@
 """Tests for the Masker."""
 
-import pytest
-from src.engine.masker import Masker
 from src.engine.entities import DetectedSpan, EntityType
+from src.engine.masker import Masker
 
 
 class TestMasker:

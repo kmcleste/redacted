@@ -1,6 +1,7 @@
 """Unit tests for validators.py."""
 
 import pytest
+
 from src.engine.validators import (
     validate_aba_routing,
     validate_credit_card,
@@ -11,7 +12,6 @@ from src.engine.validators import (
     validate_ssn,
     validate_vin,
 )
-
 
 # ---------------------------------------------------------------------------
 # SSN

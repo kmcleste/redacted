@@ -90,14 +90,29 @@ impl PolicyBundle {
         };
         // Populate with defaults for every known entity type.
         let all = [
-            EntityType::Ssn, EntityType::CreditCard, EntityType::BankRouting,
-            EntityType::BankAccount, EntityType::Email, EntityType::Phone,
-            EntityType::IpAddress, EntityType::Vin, EntityType::PolicyNumber,
-            EntityType::ClaimId, EntityType::MemberId, EntityType::GroupId,
-            EntityType::Npi, EntityType::DateOfBirth, EntityType::MedicalRecord,
-            EntityType::AwsKey, EntityType::GithubToken, EntityType::PemBlock,
-            EntityType::ConnectionString, EntityType::GenericSecret,
-            EntityType::Person, EntityType::Address, EntityType::Org,
+            EntityType::Ssn,
+            EntityType::CreditCard,
+            EntityType::BankRouting,
+            EntityType::BankAccount,
+            EntityType::Email,
+            EntityType::Phone,
+            EntityType::IpAddress,
+            EntityType::Vin,
+            EntityType::PolicyNumber,
+            EntityType::ClaimId,
+            EntityType::MemberId,
+            EntityType::GroupId,
+            EntityType::Npi,
+            EntityType::DateOfBirth,
+            EntityType::MedicalRecord,
+            EntityType::AwsKey,
+            EntityType::GithubToken,
+            EntityType::PemBlock,
+            EntityType::ConnectionString,
+            EntityType::GenericSecret,
+            EntityType::Person,
+            EntityType::Address,
+            EntityType::Org,
         ];
         for et in all {
             bundle.entity_policies.insert(
@@ -120,7 +135,11 @@ impl PolicyBundle {
         for et in [EntityType::Person, EntityType::Org, EntityType::Address] {
             bundle.entity_policies.insert(
                 et,
-                EntityPolicy { enabled: false, threshold: 1.0, fail_closed: false },
+                EntityPolicy {
+                    enabled: false,
+                    threshold: 1.0,
+                    fail_closed: false,
+                },
             );
         }
         bundle
@@ -140,6 +159,8 @@ impl PolicyBundle {
     }
 
     pub fn is_enabled(&self, entity_type: EntityType) -> bool {
-        self.entity_policies.get(&entity_type).map_or(true, |p| p.enabled)
+        self.entity_policies
+            .get(&entity_type)
+            .is_none_or(|p| p.enabled)
     }
 }

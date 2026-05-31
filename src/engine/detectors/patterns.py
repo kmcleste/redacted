@@ -14,11 +14,12 @@ from __future__ import annotations
 
 import re
 import warnings
+from typing import cast
 
 try:
-    import re2 as _re  # type: ignore[import]
+    import re2 as _re
 except ImportError:
-    _re = re  # type: ignore[assignment]
+    _re = re
     warnings.warn(
         "google-re2 not installed; using stdlib re. "
         "Install 'google-re2' for production ReDoS safety and bounded WCET.",
@@ -28,7 +29,7 @@ except ImportError:
 
 
 def compile(pattern: str, flags: int = 0) -> re.Pattern[str]:  # noqa: A001
-    return _re.compile(pattern, flags)
+    return cast(re.Pattern[str], _re.compile(pattern, flags))
 
 
 # ---------------------------------------------------------------------------

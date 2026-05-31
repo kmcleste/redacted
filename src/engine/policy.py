@@ -93,7 +93,7 @@ class PolicyBundle:
         return policy.enabled if policy else True
 
     @classmethod
-    def for_code_traffic(cls) -> "PolicyBundle":
+    def for_code_traffic(cls) -> PolicyBundle:
         """Relaxed policy for confirmed code-channel traffic (D9)."""
         bundle = cls(modality=Modality.CODE)
         # Suppress fuzzy NER in code; secrets stay at max priority.
@@ -102,5 +102,5 @@ class PolicyBundle:
         return bundle
 
     @classmethod
-    def default(cls) -> "PolicyBundle":
+    def default(cls) -> PolicyBundle:
         return cls()

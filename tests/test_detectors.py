@@ -1,16 +1,15 @@
 """Unit tests for individual detectors and the ensemble."""
 
-import pytest
+from src.engine.detectors.ensemble import DetectionEnsemble
 from src.engine.detectors.regex_detectors import (
     CreditCardDetector,
     EmailDetector,
     IPAddressDetector,
-    SSNDetector,
     PhoneDetector,
+    SSNDetector,
     VINDetector,
 )
 from src.engine.detectors.secret_detectors import SecretDetector
-from src.engine.detectors.ensemble import DetectionEnsemble
 from src.engine.entities import EntityType
 
 

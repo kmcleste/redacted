@@ -10,8 +10,8 @@ Overlap resolution: when two spans overlap, the higher-scoring, longer span wins
 
 from __future__ import annotations
 
-from ..entities import DetectedSpan, EntityType
-from ..policy import PolicyBundle, Decision, Modality
+from ..entities import DetectedSpan
+from ..policy import Decision, PolicyBundle
 from .base import BaseDetector
 from .prefilter import should_scan
 from .regex_detectors import (
@@ -94,7 +94,7 @@ class DetectionEnsemble:
         for detector in self._hard_rt:
             try:
                 raw.extend(detector.detect(text))
-            except Exception:
+            except Exception:  # noqa: S110
                 # Hard-lane detector failure must not take down the pipeline (D6).
                 # In production: emit a metric + alert; do NOT silently swallow.
                 pass

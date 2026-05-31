@@ -11,10 +11,10 @@ CI should fail if any gated threshold is not met.
 from __future__ import annotations
 
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from src.engine.detectors.ensemble import DetectionEnsemble
-from src.engine.entities import DetectedSpan, EntityType
+from src.engine.entities import EntityType
 
 # ---------------------------------------------------------------------------
 # Gold dataset

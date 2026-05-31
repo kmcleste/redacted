@@ -32,7 +32,8 @@ use proto::{
     engine_service_server::{EngineService, EngineServiceServer},
     DeleteVaultEntryRequest, DeleteVaultEntryResponse, DetectRequest, DetectResponse,
     DetectedSpan as ProtoSpan, HealthRequest, HealthResponse, MaskRequest, MaskResponse,
-    ModalityHint, RehydrateChunkRequest, RehydrateChunkResponse, RehydrateRequest, RehydrateResponse,
+    ModalityHint, RehydrateChunkRequest, RehydrateChunkResponse, RehydrateRequest,
+    RehydrateResponse,
 };
 
 const VERSION: &str = "0.1.0";
@@ -103,8 +104,8 @@ impl EngineService for EngineServer {
 
     async fn mask(&self, req: Request<MaskRequest>) -> Result<Response<MaskResponse>, Status> {
         let req = req.into_inner();
-        let cid = (!req.correlation_id.is_empty()).then(|| req.correlation_id.as_str());
-        let conv = (!req.conversation_id.is_empty()).then(|| req.conversation_id.as_str());
+        let cid = (!req.correlation_id.is_empty()).then_some(req.correlation_id.as_str());
+        let conv = (!req.conversation_id.is_empty()).then_some(req.conversation_id.as_str());
 
         let result = if req.channel_id.is_empty() {
             self.engine.mask(&req.text, cid, conv)
@@ -120,7 +121,8 @@ impl EngineService for EngineServer {
                 app_id: None,
                 hint,
             };
-            self.engine.mask_with_provenance(&req.text, cid, conv, &provenance)
+            self.engine
+                .mask_with_provenance(&req.text, cid, conv, &provenance)
         };
 
         let was_masked = result.was_masked();
@@ -141,7 +143,7 @@ impl EngineService for EngineServer {
         req: Request<RehydrateRequest>,
     ) -> Result<Response<RehydrateResponse>, Status> {
         let req = req.into_inner();
-        let conv = (!req.conversation_id.is_empty()).then(|| req.conversation_id.as_str());
+        let conv = (!req.conversation_id.is_empty()).then_some(req.conversation_id.as_str());
 
         let result = self.engine.rehydrate(&req.text, &req.correlation_id, conv);
 
@@ -158,11 +160,12 @@ impl EngineService for EngineServer {
     ) -> Result<Response<RehydrateChunkResponse>, Status> {
         let req = req.into_inner();
         let stream_id = req.stream_id.clone();
-        let conv = (!req.conversation_id.is_empty()).then(|| req.conversation_id.as_str());
+        let conv = (!req.conversation_id.is_empty()).then_some(req.conversation_id.as_str());
 
-        let mut sessions = self.stream_sessions.lock().map_err(|_| {
-            Status::internal("stream session lock poisoned")
-        })?;
+        let mut sessions = self
+            .stream_sessions
+            .lock()
+            .map_err(|_| Status::internal("stream session lock poisoned"))?;
 
         if !sessions.contains_key(&stream_id) {
             let rehydrator = self.engine.streaming_rehydrator(&req.correlation_id, conv);
@@ -191,7 +194,9 @@ impl EngineService for EngineServer {
         &self,
         req: Request<DeleteVaultEntryRequest>,
     ) -> Result<Response<DeleteVaultEntryResponse>, Status> {
-        let deleted = self.engine.delete_vault_entry(&req.into_inner().correlation_id);
+        let deleted = self
+            .engine
+            .delete_vault_entry(&req.into_inner().correlation_id);
         Ok(Response::new(DeleteVaultEntryResponse { deleted }))
     }
 }
@@ -207,12 +212,15 @@ async fn serve_metrics(
     use tokio::io::AsyncWriteExt;
     use tokio::net::TcpListener;
 
-    let listener = TcpListener::bind(addr).await
+    let listener = TcpListener::bind(addr)
+        .await
         .unwrap_or_else(|e| panic!("metrics bind {addr}: {e}"));
     tracing::info!("metrics endpoint at http://{addr}/metrics");
 
     loop {
-        let Ok((mut stream, _)) = listener.accept().await else { continue };
+        let Ok((mut stream, _)) = listener.accept().await else {
+            continue;
+        };
         let body = handle.render();
         let response = format!(
             "HTTP/1.1 200 OK\r\nContent-Type: text/plain; version=0.0.4; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
@@ -253,8 +261,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let engine = Engine::with_default_policy();
     let service = EngineServer::new(engine);
 
-    let addr = std::env::var("ENGINE_LISTEN_ADDR")
-        .unwrap_or_else(|_| "0.0.0.0:50051".to_string());
+    let addr = std::env::var("ENGINE_LISTEN_ADDR").unwrap_or_else(|_| "0.0.0.0:50051".to_string());
 
     tracing::info!("engine-grpc listening on {addr}");
 

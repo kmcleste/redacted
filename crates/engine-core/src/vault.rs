@@ -28,7 +28,11 @@ use crate::error::{EngineError, Result};
 fn encrypt(cipher: &ChaCha20Poly1305, plaintext: &[u8]) -> Vec<u8> {
     let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng);
     let mut out = nonce.to_vec();
-    out.extend(cipher.encrypt(&nonce, plaintext).expect("ChaCha20 encryption failed"));
+    out.extend(
+        cipher
+            .encrypt(&nonce, plaintext)
+            .expect("ChaCha20 encryption failed"),
+    );
     out
 }
 
@@ -106,7 +110,12 @@ impl Vault {
     }
 
     /// Store or merge a placeholder map for the given correlation ID.
-    pub fn store(&self, correlation_id: &str, placeholder_map: HashMap<String, String>, ttl: Duration) {
+    pub fn store(
+        &self,
+        correlation_id: &str,
+        placeholder_map: HashMap<String, String>,
+        ttl: Duration,
+    ) {
         let mut inner = self.inner.lock().expect("vault mutex poisoned");
 
         // Encrypt all values *before* mutably borrowing `entries` — avoids
@@ -130,7 +139,10 @@ impl Vault {
         let map: HashMap<String, Vec<u8>> = encrypted.into_iter().collect();
         inner.entries.insert(
             correlation_id.to_string(),
-            VaultEntry { map, expires_at: Instant::now() + ttl },
+            VaultEntry {
+                map,
+                expires_at: Instant::now() + ttl,
+            },
         );
     }
 
@@ -171,7 +183,10 @@ impl Vault {
 
     pub fn contains(&self, correlation_id: &str) -> bool {
         let inner = self.inner.lock().expect("vault mutex poisoned");
-        inner.entries.get(correlation_id).map_or(false, |e| !e.is_expired())
+        inner
+            .entries
+            .get(correlation_id)
+            .is_some_and(|e| !e.is_expired())
     }
 }
 
@@ -183,6 +198,8 @@ impl Default for Vault {
 
 impl std::fmt::Debug for Vault {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Vault").field("live_entries", &self.len()).finish()
+        f.debug_struct("Vault")
+            .field("live_entries", &self.len())
+            .finish()
     }
 }

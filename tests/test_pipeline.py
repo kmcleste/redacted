@@ -1,8 +1,6 @@
 """End-to-end pipeline tests: mask → rehydrate round-trip."""
 
-import pytest
 from src.engine.pipeline import Engine
-from src.engine.policy import PolicyBundle
 
 
 class TestEngineMaskRehydrate:

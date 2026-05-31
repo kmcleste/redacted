@@ -19,7 +19,7 @@ use crate::{
     policy::PolicyBundle,
     rehydrator::BatchRehydrator,
     streaming::StreamingRehydrator,
-    vault::{Vault, DEFAULT_TTL, CONVERSATION_TTL},
+    vault::{Vault, CONVERSATION_TTL, DEFAULT_TTL},
 };
 
 #[derive(Clone)]
@@ -43,7 +43,10 @@ impl Engine {
         Self::with_trusted_channels(policy, TrustedCodeChannels::new(std::iter::empty::<&str>()))
     }
 
-    pub fn with_trusted_channels(policy: PolicyBundle, trusted_channels: TrustedCodeChannels) -> Self {
+    pub fn with_trusted_channels(
+        policy: PolicyBundle,
+        trusted_channels: TrustedCodeChannels,
+    ) -> Self {
         Self {
             inner: Arc::new(EngineInner {
                 ensemble_prose: DetectionEnsemble::new(policy),
@@ -140,7 +143,11 @@ impl Engine {
 
         let (masked_text, placeholder_map) = self.inner.masker.mask(text, &spans);
 
-        let ttl = if conversation_id.is_some() { CONVERSATION_TTL } else { DEFAULT_TTL };
+        let ttl = if conversation_id.is_some() {
+            CONVERSATION_TTL
+        } else {
+            DEFAULT_TTL
+        };
         let vault_key = conversation_id.unwrap_or(&correlation_id);
         self.inner.vault.store(vault_key, placeholder_map, ttl);
         eng_metrics::record_vault_op("store");
@@ -194,7 +201,7 @@ impl Engine {
                     text: text.to_string(),
                     correlation_id: correlation_id.to_string(),
                     rehydrated_count: 0,
-                }
+                };
             }
         };
 

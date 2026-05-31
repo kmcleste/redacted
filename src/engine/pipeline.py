@@ -13,7 +13,7 @@ import uuid
 from collections import defaultdict
 
 from .detectors.ensemble import DetectionEnsemble
-from .entities import DetectedSpan, EntityType, MaskResult, RehydrateResult
+from .entities import DetectedSpan, MaskResult, RehydrateResult
 from .masker import Masker
 from .policy import PolicyBundle
 from .rehydrator import BatchRehydrator

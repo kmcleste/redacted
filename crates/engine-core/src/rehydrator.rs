@@ -10,8 +10,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 
 // Matches any typed positional placeholder: [ENTITY_TYPE_N]
-static PLACEHOLDER_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\[[A-Z_]+_\d+\]").unwrap());
+static PLACEHOLDER_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\[[A-Z_]+_\d+\]").unwrap());
 
 pub struct BatchRehydrator;
 

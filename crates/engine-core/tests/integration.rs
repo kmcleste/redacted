@@ -176,13 +176,17 @@ mod detectors {
     #[test]
     fn valid_visa_detected() {
         let spans = ensemble().detect("card: 4532015112830366");
-        assert!(spans.iter().any(|s| s.entity_type == EntityType::CreditCard));
+        assert!(spans
+            .iter()
+            .any(|s| s.entity_type == EntityType::CreditCard));
     }
 
     #[test]
     fn test_card_not_detected() {
         let spans = ensemble().detect("card 4111111111111111");
-        assert!(spans.iter().all(|s| s.entity_type != EntityType::CreditCard));
+        assert!(spans
+            .iter()
+            .all(|s| s.entity_type != EntityType::CreditCard));
     }
 
     #[test]
@@ -208,7 +212,9 @@ mod detectors {
         let token = format!("ghp_{}", "A".repeat(36));
         let text = format!("token: {token}");
         let spans = ensemble().detect(&text);
-        assert!(spans.iter().any(|s| s.entity_type == EntityType::GithubToken));
+        assert!(spans
+            .iter()
+            .any(|s| s.entity_type == EntityType::GithubToken));
     }
 
     #[test]
@@ -220,7 +226,9 @@ mod detectors {
     #[test]
     fn connection_string_detected() {
         let spans = ensemble().detect("db = postgres://user:pass@host:5432/db");
-        assert!(spans.iter().any(|s| s.entity_type == EntityType::ConnectionString));
+        assert!(spans
+            .iter()
+            .any(|s| s.entity_type == EntityType::ConnectionString));
     }
 
     #[test]
@@ -236,7 +244,10 @@ mod detectors {
         for (i, a) in spans.iter().enumerate() {
             for (j, b) in spans.iter().enumerate() {
                 if i != j {
-                    assert!(a.end <= b.start || b.end <= a.start, "overlapping spans: {a:?} {b:?}");
+                    assert!(
+                        a.end <= b.start || b.end <= a.start,
+                        "overlapping spans: {a:?} {b:?}"
+                    );
                 }
             }
         }
@@ -324,8 +335,7 @@ mod rehydrator {
     #[test]
     fn repeated_placeholder() {
         let map = HashMap::from([("[EMAIL_1]".to_string(), "a@b.com".to_string())]);
-        let (result, hits, misses) =
-            BatchRehydrator.rehydrate("[EMAIL_1] sent to [EMAIL_1]", &map);
+        let (result, hits, misses) = BatchRehydrator.rehydrate("[EMAIL_1] sent to [EMAIL_1]", &map);
         assert_eq!(result, "a@b.com sent to a@b.com");
         assert_eq!(hits, 2);
         assert_eq!(misses, 0);
@@ -356,12 +366,18 @@ mod streaming {
 
     #[test]
     fn whole_placeholder_in_one_chunk() {
-        assert_eq!(stream(&["SSN is [SSN_1] ok"], map()), "SSN is 575-82-8889 ok");
+        assert_eq!(
+            stream(&["SSN is [SSN_1] ok"], map()),
+            "SSN is 575-82-8889 ok"
+        );
     }
 
     #[test]
     fn placeholder_split_across_chunks() {
-        assert_eq!(stream(&["before [SS", "N_", "1] after"], map()), "before 575-82-8889 after");
+        assert_eq!(
+            stream(&["before [SS", "N_", "1] after"], map()),
+            "before 575-82-8889 after"
+        );
     }
 
     #[test]
@@ -381,7 +397,10 @@ mod streaming {
 
     #[test]
     fn unknown_placeholder_passes_through() {
-        assert_eq!(stream(&["value [UNKNOWN_99] here"], map()), "value [UNKNOWN_99] here");
+        assert_eq!(
+            stream(&["value [UNKNOWN_99] here"], map()),
+            "value [UNKNOWN_99] here"
+        );
     }
 
     #[test]
@@ -482,7 +501,19 @@ mod pipeline {
         let e = engine();
         let text = "Cards: 4532015112830366 and 5425233430109903, SSN 575-82-8889";
         let result = e.mask(text, None, None);
-        assert!(*result.entity_counts.get(&engine_core::EntityType::CreditCard).unwrap_or(&0) >= 2);
-        assert!(*result.entity_counts.get(&engine_core::EntityType::Ssn).unwrap_or(&0) >= 1);
+        assert!(
+            *result
+                .entity_counts
+                .get(&engine_core::EntityType::CreditCard)
+                .unwrap_or(&0)
+                >= 2
+        );
+        assert!(
+            *result
+                .entity_counts
+                .get(&engine_core::EntityType::Ssn)
+                .unwrap_or(&0)
+                >= 1
+        );
     }
 }

@@ -14,11 +14,7 @@ use crate::entities::{DetectedSpan, EntityType};
 pub struct Masker;
 
 impl Masker {
-    pub fn mask(
-        &self,
-        text: &str,
-        spans: &[DetectedSpan],
-    ) -> (String, HashMap<String, String>) {
+    pub fn mask(&self, text: &str, spans: &[DetectedSpan]) -> (String, HashMap<String, String>) {
         if spans.is_empty() {
             return (text.to_string(), HashMap::new());
         }

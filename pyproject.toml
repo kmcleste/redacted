@@ -51,3 +51,13 @@ ignore = ["S101"]
 python_version = "3.11"
 strict = true
 ignore_missing_imports = true
+# FastAPI route decorators (@app.get / @app.post etc.) are not fully typed
+# under strict mypy; disable that one flag rather than adding per-function
+# type:ignore comments throughout the transport layer.
+disallow_untyped_decorators = false
+
+[[tool.mypy.overrides]]
+# Pydantic BaseModel stubs are typed as Any in mypy's view when the pydantic
+# mypy plugin isn't loaded; suppress the subclassing-Any error for models only.
+module = "transport.models"
+disallow_subclassing_any = false

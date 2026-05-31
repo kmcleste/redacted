@@ -9,8 +9,6 @@ from __future__ import annotations
 
 import re
 
-from .entities import RehydrateResult
-
 # Matches any typed positional placeholder: [ENTITY_TYPE_N]
 _PLACEHOLDER_RE = re.compile(r"\[([A-Z_]+)_(\d+)\]")
 

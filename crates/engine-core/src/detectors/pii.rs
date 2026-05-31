@@ -20,7 +20,9 @@ const CONTEXT_WINDOW: usize = 150;
 pub struct SsnDetector;
 
 impl Detector for SsnDetector {
-    fn name(&self) -> &'static str { "SsnDetector" }
+    fn name(&self) -> &'static str {
+        "SsnDetector"
+    }
 
     fn detect(&self, text: &str) -> Vec<DetectedSpan> {
         let mut spans = Vec::new();
@@ -31,7 +33,13 @@ impl Detector for SsnDetector {
             if validate_ssn(m.as_str()) {
                 let key = (m.start(), m.end());
                 if seen.insert(key) {
-                    spans.push(DetectedSpan::new(m.start(), m.end(), EntityType::Ssn, m.as_str(), 0.95));
+                    spans.push(DetectedSpan::new(
+                        m.start(),
+                        m.end(),
+                        EntityType::Ssn,
+                        m.as_str(),
+                        0.95,
+                    ));
                 }
             }
         }
@@ -39,13 +47,25 @@ impl Detector for SsnDetector {
         // Bare 9-digit run — only when digit-isolated AND context keyword present.
         for m in P::SSN_BARE.find_iter(text) {
             let key = (m.start(), m.end());
-            if seen.contains(&key) { continue; }
-            if !digit_isolated(text, m.start(), m.end()) { continue; }
-            if !validate_ssn(m.as_str()) { continue; }
+            if seen.contains(&key) {
+                continue;
+            }
+            if !digit_isolated(text, m.start(), m.end()) {
+                continue;
+            }
+            if !validate_ssn(m.as_str()) {
+                continue;
+            }
             let ctx = context_window(text, m.start(), CONTEXT_WINDOW);
             if P::SSN_CONTEXT.is_match(ctx) {
                 seen.insert(key);
-                spans.push(DetectedSpan::new(m.start(), m.end(), EntityType::Ssn, m.as_str(), 0.85));
+                spans.push(DetectedSpan::new(
+                    m.start(),
+                    m.end(),
+                    EntityType::Ssn,
+                    m.as_str(),
+                    0.85,
+                ));
             }
         }
 
@@ -61,7 +81,9 @@ impl Detector for SsnDetector {
 pub struct CreditCardDetector;
 
 impl Detector for CreditCardDetector {
-    fn name(&self) -> &'static str { "CreditCardDetector" }
+    fn name(&self) -> &'static str {
+        "CreditCardDetector"
+    }
 
     fn detect(&self, text: &str) -> Vec<DetectedSpan> {
         let mut spans = Vec::new();
@@ -73,10 +95,18 @@ impl Detector for CreditCardDetector {
         for pat in patterns {
             for m in pat.find_iter(text) {
                 let key = (m.start(), m.end());
-                if seen.contains(&key) { continue; }
+                if seen.contains(&key) {
+                    continue;
+                }
                 if validate_credit_card(m.as_str()) {
                     seen.insert(key);
-                    spans.push(DetectedSpan::new(m.start(), m.end(), EntityType::CreditCard, m.as_str(), 0.90));
+                    spans.push(DetectedSpan::new(
+                        m.start(),
+                        m.end(),
+                        EntityType::CreditCard,
+                        m.as_str(),
+                        0.90,
+                    ));
                 }
             }
         }
@@ -93,16 +123,28 @@ impl Detector for CreditCardDetector {
 pub struct BankRoutingDetector;
 
 impl Detector for BankRoutingDetector {
-    fn name(&self) -> &'static str { "BankRoutingDetector" }
+    fn name(&self) -> &'static str {
+        "BankRoutingDetector"
+    }
 
     fn detect(&self, text: &str) -> Vec<DetectedSpan> {
         let mut spans = Vec::new();
         for m in P::NINE_DIGITS.find_iter(text) {
-            if !digit_isolated(text, m.start(), m.end()) { continue; }
-            if !validate_aba_routing(m.as_str()) { continue; }
+            if !digit_isolated(text, m.start(), m.end()) {
+                continue;
+            }
+            if !validate_aba_routing(m.as_str()) {
+                continue;
+            }
             let ctx = context_window(text, m.start(), CONTEXT_WINDOW);
             if P::BANK_ROUTING_CONTEXT.is_match(ctx) {
-                spans.push(DetectedSpan::new(m.start(), m.end(), EntityType::BankRouting, m.as_str(), 0.85));
+                spans.push(DetectedSpan::new(
+                    m.start(),
+                    m.end(),
+                    EntityType::BankRouting,
+                    m.as_str(),
+                    0.85,
+                ));
             }
         }
         spans
@@ -116,15 +158,25 @@ impl Detector for BankRoutingDetector {
 pub struct BankAccountDetector;
 
 impl Detector for BankAccountDetector {
-    fn name(&self) -> &'static str { "BankAccountDetector" }
+    fn name(&self) -> &'static str {
+        "BankAccountDetector"
+    }
 
     fn detect(&self, text: &str) -> Vec<DetectedSpan> {
         let mut spans = Vec::new();
         for m in P::EIGHT_TO_17_DIGITS.find_iter(text) {
-            if !digit_isolated(text, m.start(), m.end()) { continue; }
+            if !digit_isolated(text, m.start(), m.end()) {
+                continue;
+            }
             let ctx = context_window(text, m.start(), CONTEXT_WINDOW);
             if P::BANK_ACCOUNT_CONTEXT.is_match(ctx) {
-                spans.push(DetectedSpan::new(m.start(), m.end(), EntityType::BankAccount, m.as_str(), 0.75));
+                spans.push(DetectedSpan::new(
+                    m.start(),
+                    m.end(),
+                    EntityType::BankAccount,
+                    m.as_str(),
+                    0.75,
+                ));
             }
         }
         spans
@@ -138,7 +190,9 @@ impl Detector for BankAccountDetector {
 pub struct EmailDetector;
 
 impl Detector for EmailDetector {
-    fn name(&self) -> &'static str { "EmailDetector" }
+    fn name(&self) -> &'static str {
+        "EmailDetector"
+    }
 
     fn detect(&self, text: &str) -> Vec<DetectedSpan> {
         P::EMAIL
@@ -156,7 +210,9 @@ impl Detector for EmailDetector {
 pub struct PhoneDetector;
 
 impl Detector for PhoneDetector {
-    fn name(&self) -> &'static str { "PhoneDetector" }
+    fn name(&self) -> &'static str {
+        "PhoneDetector"
+    }
 
     fn detect(&self, text: &str) -> Vec<DetectedSpan> {
         let mut spans = Vec::new();
@@ -165,7 +221,9 @@ impl Detector for PhoneDetector {
         for pat in &[&P::PHONE_US, &P::PHONE_INTL] {
             for m in pat.find_iter(text) {
                 let key = (m.start(), m.end());
-                if seen.contains(&key) { continue; }
+                if seen.contains(&key) {
+                    continue;
+                }
                 // The regex may eat a leading space/( — ensure the char before isn't alphanumeric.
                 if !word_boundary_start(text, m.start()) {
                     // Allow the pattern to start with '(' (a paren is not a word char).
@@ -174,9 +232,17 @@ impl Detector for PhoneDetector {
                         continue;
                     }
                 }
-                if !validate_phone(m.as_str()) { continue; }
+                if !validate_phone(m.as_str()) {
+                    continue;
+                }
                 seen.insert(key);
-                spans.push(DetectedSpan::new(m.start(), m.end(), EntityType::Phone, m.as_str(), 0.80));
+                spans.push(DetectedSpan::new(
+                    m.start(),
+                    m.end(),
+                    EntityType::Phone,
+                    m.as_str(),
+                    0.80,
+                ));
             }
         }
         spans.sort_by_key(|s| s.start);
@@ -191,7 +257,9 @@ impl Detector for PhoneDetector {
 pub struct IpAddressDetector;
 
 impl Detector for IpAddressDetector {
-    fn name(&self) -> &'static str { "IpAddressDetector" }
+    fn name(&self) -> &'static str {
+        "IpAddressDetector"
+    }
 
     fn detect(&self, text: &str) -> Vec<DetectedSpan> {
         let mut spans = Vec::new();
@@ -200,11 +268,21 @@ impl Detector for IpAddressDetector {
         for pat in &[&P::IPV4, &P::IPV6] {
             for m in pat.find_iter(text) {
                 let key = (m.start(), m.end());
-                if seen.contains(&key) { continue; }
-                if !word_boundary(text, m.start(), m.end()) { continue; }
+                if seen.contains(&key) {
+                    continue;
+                }
+                if !word_boundary(text, m.start(), m.end()) {
+                    continue;
+                }
                 if validate_ip_address(m.as_str()) {
                     seen.insert(key);
-                    spans.push(DetectedSpan::new(m.start(), m.end(), EntityType::IpAddress, m.as_str(), 0.85));
+                    spans.push(DetectedSpan::new(
+                        m.start(),
+                        m.end(),
+                        EntityType::IpAddress,
+                        m.as_str(),
+                        0.85,
+                    ));
                 }
             }
         }
@@ -220,7 +298,9 @@ impl Detector for IpAddressDetector {
 pub struct VinDetector;
 
 impl Detector for VinDetector {
-    fn name(&self) -> &'static str { "VinDetector" }
+    fn name(&self) -> &'static str {
+        "VinDetector"
+    }
 
     fn detect(&self, text: &str) -> Vec<DetectedSpan> {
         P::VIN
@@ -238,16 +318,28 @@ impl Detector for VinDetector {
 pub struct NpiDetector;
 
 impl Detector for NpiDetector {
-    fn name(&self) -> &'static str { "NpiDetector" }
+    fn name(&self) -> &'static str {
+        "NpiDetector"
+    }
 
     fn detect(&self, text: &str) -> Vec<DetectedSpan> {
         let mut spans = Vec::new();
         for m in P::TEN_DIGITS.find_iter(text) {
-            if !digit_isolated(text, m.start(), m.end()) { continue; }
-            if !validate_npi(m.as_str()) { continue; }
+            if !digit_isolated(text, m.start(), m.end()) {
+                continue;
+            }
+            if !validate_npi(m.as_str()) {
+                continue;
+            }
             let ctx = context_window(text, m.start(), CONTEXT_WINDOW);
             if P::NPI_CONTEXT.is_match(ctx) {
-                spans.push(DetectedSpan::new(m.start(), m.end(), EntityType::Npi, m.as_str(), 0.85));
+                spans.push(DetectedSpan::new(
+                    m.start(),
+                    m.end(),
+                    EntityType::Npi,
+                    m.as_str(),
+                    0.85,
+                ));
             }
         }
         spans
@@ -261,23 +353,48 @@ impl Detector for NpiDetector {
 pub struct DomainIdentifierDetector;
 
 impl Detector for DomainIdentifierDetector {
-    fn name(&self) -> &'static str { "DomainIdentifierDetector" }
+    fn name(&self) -> &'static str {
+        "DomainIdentifierDetector"
+    }
 
     fn detect(&self, text: &str) -> Vec<DetectedSpan> {
         let mut spans = Vec::new();
 
-        let matchers: &[(&once_cell::sync::Lazy<regex::Regex>, &once_cell::sync::Lazy<regex::Regex>, EntityType, f32)] = &[
-            (&P::POLICY_NUMBER, &P::POLICY_CONTEXT, EntityType::PolicyNumber, 0.80),
-            (&P::CLAIM_ID,      &P::CLAIM_CONTEXT,  EntityType::ClaimId,      0.80),
-            (&P::MEMBER_ID,     &P::MEMBER_CONTEXT, EntityType::MemberId,     0.75),
+        let matchers: &[(
+            &once_cell::sync::Lazy<regex::Regex>,
+            &once_cell::sync::Lazy<regex::Regex>,
+            EntityType,
+            f32,
+        )] = &[
+            (
+                &P::POLICY_NUMBER,
+                &P::POLICY_CONTEXT,
+                EntityType::PolicyNumber,
+                0.80,
+            ),
+            (&P::CLAIM_ID, &P::CLAIM_CONTEXT, EntityType::ClaimId, 0.80),
+            (
+                &P::MEMBER_ID,
+                &P::MEMBER_CONTEXT,
+                EntityType::MemberId,
+                0.75,
+            ),
         ];
 
         for (pat, ctx_pat, entity_type, score) in matchers {
             for m in pat.find_iter(text) {
-                if !word_boundary(text, m.start(), m.end()) { continue; }
+                if !word_boundary(text, m.start(), m.end()) {
+                    continue;
+                }
                 let ctx = context_window(text, m.start(), CONTEXT_WINDOW);
                 if ctx_pat.is_match(ctx) {
-                    spans.push(DetectedSpan::new(m.start(), m.end(), *entity_type, m.as_str(), *score));
+                    spans.push(DetectedSpan::new(
+                        m.start(),
+                        m.end(),
+                        *entity_type,
+                        m.as_str(),
+                        *score,
+                    ));
                 }
             }
         }
@@ -294,14 +411,22 @@ impl Detector for DomainIdentifierDetector {
 pub struct DateOfBirthDetector;
 
 impl Detector for DateOfBirthDetector {
-    fn name(&self) -> &'static str { "DateOfBirthDetector" }
+    fn name(&self) -> &'static str {
+        "DateOfBirthDetector"
+    }
 
     fn detect(&self, text: &str) -> Vec<DetectedSpan> {
         let mut spans = Vec::new();
         for m in P::DOB.find_iter(text) {
             let ctx = context_window(text, m.start(), CONTEXT_WINDOW);
             if P::DOB_CONTEXT.is_match(ctx) {
-                spans.push(DetectedSpan::new(m.start(), m.end(), EntityType::DateOfBirth, m.as_str(), 0.85));
+                spans.push(DetectedSpan::new(
+                    m.start(),
+                    m.end(),
+                    EntityType::DateOfBirth,
+                    m.as_str(),
+                    0.85,
+                ));
             }
         }
         spans

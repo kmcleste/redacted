@@ -89,7 +89,7 @@ fn luhn_checksum(digits: &str) -> bool {
         }
         total += n;
     }
-    total % 10 == 0
+    total.is_multiple_of(10)
 }
 
 pub fn validate_credit_card(value: &str) -> bool {
@@ -113,12 +113,17 @@ pub fn validate_aba_routing(value: &str) -> bool {
         return false;
     }
     // Reject all-same-digit sequences (structurally invalid).
-    if digits.chars().collect::<std::collections::HashSet<_>>().len() == 1 {
+    if digits
+        .chars()
+        .collect::<std::collections::HashSet<_>>()
+        .len()
+        == 1
+    {
         return false;
     }
     let d: Vec<u32> = digits.chars().map(|c| c as u32 - b'0' as u32).collect();
     let checksum = 3 * (d[0] + d[3] + d[6]) + 7 * (d[1] + d[4] + d[7]) + (d[2] + d[5] + d[8]);
-    checksum % 10 == 0
+    checksum.is_multiple_of(10)
 }
 
 // ---------------------------------------------------------------------------
@@ -147,8 +152,8 @@ static RESERVED_NETS: Lazy<Vec<IpNet>> = Lazy::new(|| {
         "0.0.0.0/8",       // "This" network
         "240.0.0.0/4",     // Reserved
         "255.255.255.255/32",
-        "2001:db8::/32",   // IPv6 documentation
-        "::1/128",         // IPv6 loopback
+        "2001:db8::/32", // IPv6 documentation
+        "::1/128",       // IPv6 loopback
     ]
     .iter()
     .filter_map(|s| s.parse().ok())
@@ -199,8 +204,8 @@ pub fn validate_phone(value: &str) -> bool {
     // US fiction range 555-01xx in both 10-digit (with area) and 7-digit (without) forms.
     let (exchange, subscriber) = match local.len() {
         10 => (&local[3..6], &local[6..10]),
-        7  => (&local[0..3], &local[3..7]),
-        _  => return true,
+        7 => (&local[0..3], &local[3..7]),
+        _ => return true,
     };
     if exchange == "555" && subscriber.starts_with("01") {
         return false;
@@ -215,12 +220,28 @@ pub fn validate_phone(value: &str) -> bool {
 fn vin_transliterate(c: char) -> Option<u32> {
     match c {
         '0'..='9' => Some(c as u32 - b'0' as u32),
-        'A' => Some(1), 'B' => Some(2), 'C' => Some(3), 'D' => Some(4),
-        'E' => Some(5), 'F' => Some(6), 'G' => Some(7), 'H' => Some(8),
-        'J' => Some(1), 'K' => Some(2), 'L' => Some(3), 'M' => Some(4),
-        'N' => Some(5),                 'P' => Some(7), 'R' => Some(9),
-                        'S' => Some(2), 'T' => Some(3), 'U' => Some(4),
-        'V' => Some(5), 'W' => Some(6), 'X' => Some(7), 'Y' => Some(8),
+        'A' => Some(1),
+        'B' => Some(2),
+        'C' => Some(3),
+        'D' => Some(4),
+        'E' => Some(5),
+        'F' => Some(6),
+        'G' => Some(7),
+        'H' => Some(8),
+        'J' => Some(1),
+        'K' => Some(2),
+        'L' => Some(3),
+        'M' => Some(4),
+        'N' => Some(5),
+        'P' => Some(7),
+        'R' => Some(9),
+        'S' => Some(2),
+        'T' => Some(3),
+        'U' => Some(4),
+        'V' => Some(5),
+        'W' => Some(6),
+        'X' => Some(7),
+        'Y' => Some(8),
         'Z' => Some(9),
         _ => None,
     }
@@ -245,6 +266,10 @@ pub fn validate_vin(value: &str) -> bool {
         .sum();
 
     let remainder = total % 11;
-    let check = if remainder == 10 { 'X' } else { char::from_digit(remainder, 10).unwrap() };
+    let check = if remainder == 10 {
+        'X'
+    } else {
+        char::from_digit(remainder, 10).unwrap()
+    };
     v.chars().nth(8) == Some(check)
 }

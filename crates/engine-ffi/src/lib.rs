@@ -90,7 +90,11 @@ pub unsafe extern "C" fn engine_mask(
     if masked_bytes.len() > buf_cap {
         return -1;
     }
-    ptr::copy_nonoverlapping(masked_bytes.as_ptr() as *const c_char, out_buf, masked_bytes.len());
+    ptr::copy_nonoverlapping(
+        masked_bytes.as_ptr() as *const c_char,
+        out_buf,
+        masked_bytes.len(),
+    );
     *out_len = masked_bytes.len() - 1; // exclude null terminator
 
     // Write correlation ID.
@@ -103,7 +107,11 @@ pub unsafe extern "C" fn engine_mask(
     if cid_bytes.len() > cid_cap {
         return -1;
     }
-    ptr::copy_nonoverlapping(cid_bytes.as_ptr() as *const c_char, corr_id_buf, cid_bytes.len());
+    ptr::copy_nonoverlapping(
+        cid_bytes.as_ptr() as *const c_char,
+        corr_id_buf,
+        cid_bytes.len(),
+    );
     *corr_id_len = cid_bytes.len() - 1;
 
     0
@@ -150,7 +158,11 @@ pub unsafe extern "C" fn engine_rehydrate(
     if out_bytes.len() > buf_cap {
         return -1;
     }
-    ptr::copy_nonoverlapping(out_bytes.as_ptr() as *const c_char, out_buf, out_bytes.len());
+    ptr::copy_nonoverlapping(
+        out_bytes.as_ptr() as *const c_char,
+        out_buf,
+        out_bytes.len(),
+    );
     *out_len = out_bytes.len() - 1;
 
     0
@@ -174,5 +186,9 @@ pub unsafe extern "C" fn engine_delete_vault_entry(
         Ok(s) => s,
         Err(_) => return -1,
     };
-    if handle.engine.delete_vault_entry(cid) { 1 } else { 0 }
+    if handle.engine.delete_vault_entry(cid) {
+        1
+    } else {
+        0
+    }
 }

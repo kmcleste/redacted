@@ -28,7 +28,17 @@ pub fn should_scan(text: &str) -> bool {
     }
 
     // Secret key prefixes
-    for prefix in &["AKIA", "ABIA", "ACCA", "ASIA", "ghp_", "ghs_", "ghr_", "sk-", "-----BEGIN"] {
+    for prefix in &[
+        "AKIA",
+        "ABIA",
+        "ACCA",
+        "ASIA",
+        "ghp_",
+        "ghs_",
+        "ghr_",
+        "sk-",
+        "-----BEGIN",
+    ] {
         if text.contains(prefix) {
             return true;
         }

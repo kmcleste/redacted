@@ -10,12 +10,7 @@ use crate::{
     policy::{Decision, PolicyBundle},
 };
 
-use super::{
-    pii::*,
-    secrets::SecretDetector,
-    prefilter::should_scan,
-    Detector,
-};
+use super::{pii::*, prefilter::should_scan, secrets::SecretDetector, Detector};
 
 fn resolve_overlaps(mut spans: Vec<DetectedSpan>) -> Vec<DetectedSpan> {
     if spans.len() <= 1 {
@@ -25,7 +20,11 @@ fn resolve_overlaps(mut spans: Vec<DetectedSpan>) -> Vec<DetectedSpan> {
     spans.sort_by(|a, b| {
         a.start
             .cmp(&b.start)
-            .then(b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal))
+            .then(
+                b.score
+                    .partial_cmp(&a.score)
+                    .unwrap_or(std::cmp::Ordering::Equal),
+            )
             .then(b.len().cmp(&a.len()))
     });
 
@@ -82,9 +81,8 @@ impl DetectionEnsemble {
 
         for detector in &self.detectors {
             // Detector panics must not propagate — emit a metric in production.
-            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                detector.detect(text)
-            }));
+            let result =
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| detector.detect(text)));
             if let Ok(spans) = result {
                 raw.extend(spans);
             }

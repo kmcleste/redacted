@@ -86,11 +86,11 @@ jobs:
         run: ruff check src/ tests/
 
       - name: Type-check (mypy)
-        run: mypy src/
+        run: mypy --python-executable "$(which python)" src/
 
       - name: Test with coverage
         run: |
-          pytest tests/ \
+          python -m pytest tests/ \
             --ignore=tests/gold_eval.py \
             --cov=src \
             --cov-report=term-missing \

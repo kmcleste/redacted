@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 
 
-class EntityType(str, Enum):
+class EntityType(StrEnum):
     # Structured PII
     SSN = "SSN"
     CREDIT_CARD = "CREDIT_CARD"
@@ -30,10 +30,10 @@ class EntityType(str, Enum):
 
     # Secrets
     AWS_KEY = "AWS_KEY"
-    GITHUB_TOKEN = "GITHUB_TOKEN"
+    GITHUB_TOKEN = "GITHUB_TOKEN"  # noqa: S105
     PEM_BLOCK = "PEM_BLOCK"
     CONNECTION_STRING = "CONNECTION_STRING"
-    GENERIC_SECRET = "GENERIC_SECRET"
+    GENERIC_SECRET = "GENERIC_SECRET"  # noqa: S105
 
     # NER-lane (soft real-time; not populated by deterministic detectors)
     PERSON = "PERSON"

@@ -32,7 +32,10 @@ pub struct Timer {
 
 impl Timer {
     pub fn new(histogram: &'static str) -> Self {
-        Self { start: Instant::now(), histogram }
+        Self {
+            start: Instant::now(),
+            histogram,
+        }
     }
 
     pub fn elapsed_us(&self) -> f64 {
@@ -86,8 +89,14 @@ pub fn record_canary_hit(entity_type: &'static str) {
 }
 
 /// Start a detect-latency timer.
-pub fn detect_timer() -> Timer { Timer::new("engine_detect_duration_us") }
+pub fn detect_timer() -> Timer {
+    Timer::new("engine_detect_duration_us")
+}
 /// Start a mask-latency timer.
-pub fn mask_timer() -> Timer { Timer::new("engine_mask_duration_us") }
+pub fn mask_timer() -> Timer {
+    Timer::new("engine_mask_duration_us")
+}
 /// Start a rehydrate-latency timer.
-pub fn rehydrate_timer() -> Timer { Timer::new("engine_rehydrate_duration_us") }
+pub fn rehydrate_timer() -> Timer {
+    Timer::new("engine_rehydrate_duration_us")
+}

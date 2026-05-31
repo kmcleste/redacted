@@ -22,21 +22,19 @@ For SSE streaming of LLM responses, the typical integration is:
 from __future__ import annotations
 
 import uuid
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
 
 from ..engine.pipeline import Engine
 from ..engine.policy import PolicyBundle
 from ..engine.streaming import StreamingRehydrator
 from .models import (
+    DetectedSpanResponse,
     DetectRequest,
     DetectResponse,
-    DetectedSpanResponse,
-    ErrorResponse,
     HealthResponse,
     MaskRequest,
     MaskResponse,

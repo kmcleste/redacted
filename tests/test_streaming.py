@@ -10,9 +10,7 @@ Key scenarios:
   6. Flush at end of stream.
 """
 
-import pytest
 from src.engine.streaming import StreamingRehydrator
-
 
 MAP = {
     "[SSN_1]": "575-82-8889",
